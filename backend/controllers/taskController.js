@@ -20,9 +20,7 @@ try {
 }
 };
 
-const updateTask = async (
-req,
-res) => {
+const updateTask = async (req,res) => {
 const { title, description, completed, deadline } = req.body;
 try {
 const task = await Task.findById(req.params.id);
