@@ -12,7 +12,7 @@ const getTasks = async (req,res) => {
 const getAllReviews = async (req,res) => {
     try {
         // Sort tasks by rating in descending order, (-1 = highest rating first)
-        const tasks = (await Task.find()).sort({ rating: -1});
+        const tasks = await Task.find().sort({ rating: -1 });
         res.json(tasks);
     } catch(error){
         res.status(500).json({message: error.message});
