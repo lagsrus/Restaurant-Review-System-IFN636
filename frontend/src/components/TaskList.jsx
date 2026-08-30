@@ -21,7 +21,11 @@ const TaskList = ({ tasks, setTasks, setEditingTask }) => {
         <div key={task._id} className="bg-gray-100 p-4 mb-4 rounded shadow">
           <h2 className="font-bold">{task.title}</h2>
           <p>{task.description}</p>
-          <p className="text-sm text-gray-500">Deadline: {new Date(task.deadline).toLocaleDateString()}</p>
+          <p>{task.cuisine}</p>
+          <p>{task.location}</p>
+          <p>{task.waitTime}</p>
+          <p>{task.cost}</p>
+          <p className="text-sm text-gray-500">Visited: {new Date(task.visitedAt).toLocaleDateString()}</p>
           <div className="mt-2">
             <button
               onClick={() => setEditingTask(task)}
