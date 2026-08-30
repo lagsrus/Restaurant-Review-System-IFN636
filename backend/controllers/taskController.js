@@ -9,7 +9,15 @@ const getTasks = async (req,res) => {
         res.status(500).json({message: error.message});
     }
 };
-
+const getAllReviews = async (req,res) => {
+    try {
+        // Sort tasks by rating in descending order, (-1 = highest rating first)
+        const tasks = (await Task.find()).sort({ rating: -1});
+        res.json(tasks);
+    } catch(error){
+        res.status(500).json({message: error.message});
+    }
+}
 const addTask = async (req,res) => {
     const { title, description, cuisine, location, waitTime, cost, rating, visitedAt } = req.body;
 try {
@@ -41,16 +49,22 @@ res.status(500).json({ message: error.message });
 }
 };
 
-const deleteTask = async (
-req,
-res) => {
-try {
-const task = await Task.findById(req.params.id);
-if (!task) return res.status(404).json({ message: 'Task not found' });
-await task.remove();
-res.json({ message: 'Task deleted' });
-} catch (error) {
-res.status(500).json({ message: error.message });
-}
+const deleteTask = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ message: 'Task not found' });
+
+    const isOwner = task.userId.toString() === req.user.id.toString();
+    const isAdmin = req.user.isAdmin === true;
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: 'Not authorized to delete this review' });
+    }
+    await task.remove();
+    res.json({ message: 'Task deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
-module.exports = { getTasks, addTask, updateTask, deleteTask };
+
+module.exports = { getTasks, getAllReviews, addTask, updateTask, deleteTask };
