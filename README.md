@@ -35,4 +35,4 @@
 - Admins cannot delete users, only their reviews. Users must be deleted through the database
 
 ## Deployment URL: 
-- http://15.135.186.175:3000/
+- As of 02/09/2026: http://15.135.186.175:3000
