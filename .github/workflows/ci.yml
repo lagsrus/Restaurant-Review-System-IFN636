@@ -1,0 +1,46 @@
+name: Sprint 0 CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run backend automated tests
+        working-directory: backend
+        run: npm test
+
+      - name: Check backend syntax
+        working-directory: backend
+        run: |
+          node --check server.js
+          node --check middleware/authMiddleware.js
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          CI: 'false'
+        run: npm run build
