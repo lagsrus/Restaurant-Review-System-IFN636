@@ -7,8 +7,6 @@ const Profile = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    university: '',
-    address: '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -23,8 +21,6 @@ const Profile = () => {
         setFormData({
           name: response.data.name,
           email: response.data.email,
-          university: response.data.university || '',
-          address: response.data.address || '',
         });
       } catch (error) {
         alert('Failed to fetch profile. Please try again.');
@@ -71,20 +67,6 @@ const Profile = () => {
           placeholder="Email"
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          className="w-full mb-4 p-2 border rounded"
-        />
-        <input
-          type="text"
-          placeholder="University"
-          value={formData.university}
-          onChange={(e) => setFormData({ ...formData, university: e.target.value })}
-          className="w-full mb-4 p-2 border rounded"
-        />
-        <input
-          type="text"
-          placeholder="Address"
-          value={formData.address}
-          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
           className="w-full mb-4 p-2 border rounded"
         />
         <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded">

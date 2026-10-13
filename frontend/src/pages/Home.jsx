@@ -20,8 +20,7 @@ const Home = () => {
   }, []);
 
   const handleDelete = async (id) => {
-    if (!user || !user.isAdmin) return;
-
+    if (!user || user.role !== 'admin') return;
     try {
       await axiosInstance.delete(`/api/tasks/${id}`, {
         headers: { Authorization: `Bearer ${user.token}` },
@@ -50,7 +49,7 @@ const Home = () => {
             <p><strong>Rating:</strong> {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</p>
             <p className="mt-3">{review.description}</p>
 
-            {user && user.isAdmin && (
+            {user && user.role === 'admin' && (
               <button
                 onClick={() => handleDelete(review._id)}
                 className="mt-4 bg-red-500 text-white px-4 py-2 rounded"
