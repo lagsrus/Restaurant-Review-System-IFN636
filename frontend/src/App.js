@@ -7,6 +7,7 @@ import Profile from './pages/Profile';
 import Tasks from './pages/Tasks';
 import CreateReview from './pages/CreateReview';
 import MyReviews from './pages/MyReviews';
+import RatingBreakdown from './pages/RatingBreakdown';
 
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/restaurants/:restaurantId/review" element={<CreateReview />} />
         <Route path="/my-reviews" element={<MyReviews />} />
+        <Route path="/restaurants/:restaurantId/ratings" element={<RatingBreakdown />} />
       </Routes>
     </Router>
   );
