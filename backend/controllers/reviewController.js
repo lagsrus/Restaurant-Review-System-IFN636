@@ -90,5 +90,142 @@ const createReview = async (req, res) => {
         return res.status(500).json({ message: 'Server error' });
     }
 };
+    const getMyReviews = async (req, res) => {
+    try {
+        const reviews = await Review.find({
+            userId: req.user._id
+        }).sort({ createdAt: -1 });
 
-module.exports = { createReview };
+        return res.status(200).json(reviews);
+    } catch (error) {
+        console.error('Get my reviews failed:', error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+const editReview = async (req, res) => {
+    const { reviewId } = req.params;
+    const { ratings, comment } = req.body || {};
+
+    if (!mongoose.Types.ObjectId.isValid(reviewId)) {
+        return res.status(400).json({ message: 'Invalid review ID' });
+    }
+
+    const fields = ['food', 'service', 'ambience', 'value'];
+
+    if (!ratings || fields.some(field =>
+        !Number.isInteger(ratings[field]) ||
+        ratings[field] < 1 ||
+        ratings[field] > 5
+    )) {
+        return res.status(400).json({
+            message: 'All four ratings must be whole numbers from 1 to 5'
+        });
+    }
+
+    if (typeof comment !== 'string' || !comment.trim()) {
+        return res.status(400).json({ message: 'Comment is required' });
+    }
+
+    try {
+        const review = await Review.findById(reviewId);
+
+        if (!review) {
+            return res.status(404).json({ message: 'Review not found' });
+        }
+
+        if (review.userId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+
+        const original = {
+            ratings: Object.fromEntries(
+                fields.map(field => [field, review.ratings[field]])
+            ),
+            score: review.score,
+            comment: review.comment,
+            edited: review.edited
+        };
+
+        review.ratings = Object.fromEntries(
+            fields.map(field => [field, ratings[field]])
+        );
+        review.score = Review.calculateScore(ratings);
+        review.comment = comment.trim();
+        review.edited = true;
+
+        await review.save();
+
+        try {
+            await notifyReviewChanged(review.restaurantId);
+        } catch (error) {
+            try {
+                review.ratings = original.ratings;
+                review.score = original.score;
+                review.comment = original.comment;
+                review.edited = original.edited;
+                await review.save();
+            } catch (rollbackError) {
+                console.error('Review edit rollback failed:', rollbackError);
+            }
+            throw error;
+        }
+
+        return res.status(200).json(review);
+    } catch (error) {
+        console.error('Edit review failed:', error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+const deleteReview = async (req, res) => {
+    const { reviewId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(reviewId)) {
+        return res.status(400).json({ message: 'Invalid review ID' });
+    }
+
+    try {
+        const review = await Review.findById(reviewId);
+
+        if (!review) {
+            return res.status(404).json({ message: 'Review not found' });
+        }
+
+        if (review.userId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+
+        const backup = review.toObject();
+
+        const result = await Review.deleteOne({
+            _id: reviewId,
+            userId: req.user._id
+        });
+
+        if (result.deletedCount !== 1) {
+            return res.status(404).json({ message: 'Review not found' });
+        }
+
+        try {
+            await notifyReviewChanged(review.restaurantId);
+        } catch (error) {
+            try {
+                await Review.create(backup);
+            } catch (rollbackError) {
+                console.error('Review delete rollback failed:', rollbackError);
+            }
+
+            throw error;
+        }
+
+        return res.status(200).json({
+            message: 'Review deleted successfully'
+        });
+    } catch (error) {
+        console.error('Delete review failed:', error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = { createReview, getMyReviews, editReview, deleteReview };
