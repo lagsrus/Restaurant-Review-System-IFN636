@@ -3,7 +3,7 @@ const sinon = require('sinon');
 
 const Review = require('../models/Review');
 const Restaurant = require('../models/Restaurant');
-const { createReview } = require('../controllers/reviewController');
+const { createReview, getMyReviews, editReview, deleteReview } = require('../controllers/reviewController');
 
 describe('RRP-18 / FR-07: Create four-dimension review', function () {
     const sandbox = sinon.createSandbox();
@@ -184,6 +184,8 @@ describe('RRP-18 / FR-07: Create four-dimension review', function () {
         assert.strictEqual(res.statusCode, 500);
         assert.strictEqual(res.body.message, 'Server error');
     });
+
+
 it('500: rolls back the review if the rating update fails', async function () {
     Restaurant.findByIdAndUpdate.rejects(
         new Error('Rating update failed')
@@ -211,5 +213,129 @@ it('500: rolls back the review if the rating update fails', async function () {
             true
         );
     });
+
+    it('200: returns only the logged-in customer reviews', async function () {
+        const review = {
+            _id: '507f1f77bcf86cd799439012',
+            userId,
+            restaurantId
+        };
+
+        const sortStub = sinon.stub().resolves([review]);
+        Review.find.returns({ sort: sortStub });
+
+        const res = makeResponse();
+
+        await getMyReviews(makeRequest(), res);
+
+        assert.strictEqual(res.statusCode, 200);
+        assert.deepStrictEqual(res.body, [review]);
+        assert.deepStrictEqual(Review.find.firstCall.args[0], {
+            userId
+        });
+        assert.strictEqual(sortStub.calledOnceWithExactly({
+            createdAt: -1
+        }), true);
+    });
+it('200: customer can edit their own review', async function () {
+    const review = {
+        _id: '507f1f77bcf86cd799439012',
+        restaurantId,
+        userId,
+        ratings: { food: 2, service: 3, ambience: 4, value: 4 },
+        score: 3.3,
+        comment: 'Original review',
+        edited: false,
+        save: sinon.stub().resolves()
+    };
+
+    sandbox.stub(Review, 'findById').resolves(review);
+
+    const req = makeRequest();
+    req.params.reviewId = review._id;
+    req.body.ratings = { food: 5, service: 5, ambience: 5, value: 5 };
+    req.body.comment = 'Updated review';
+
+    const res = makeResponse();
+
+    await editReview(req, res);
+
+    assert.strictEqual(res.statusCode, 200);
+    assert.strictEqual(res.body.score, 5);
+    assert.strictEqual(res.body.comment, 'Updated review');
+    assert.strictEqual(res.body.edited, true);
+    assert.strictEqual(review.save.calledOnce, true);
+    assert.strictEqual(Restaurant.findByIdAndUpdate.calledOnce, true);
+    });
+
+    it('403: customer cannot edit another customers review', async function () {
+        const review = {
+            userId: '507f191e810c19729de860eb',
+            save: sinon.stub()
+        };
+
+        sandbox.stub(Review, 'findById').resolves(review);
+
+        const req = makeRequest();
+        req.params.reviewId = '507f1f77bcf86cd799439012';
+
+        const res = makeResponse();
+
+        await editReview(req, res);
+
+        assert.strictEqual(res.statusCode, 403);
+        assert.strictEqual(review.save.called, false);
+        assert.strictEqual(Restaurant.findByIdAndUpdate.called, false);
+    });
+
+it('200: customer can delete their own review', async function () {
+    const reviewId = '507f1f77bcf86cd799439012';
+
+    const review = {
+        _id: reviewId,
+        restaurantId,
+        userId,
+        toObject: () => ({ _id: reviewId, restaurantId, userId })
+    };
+
+    sandbox.stub(Review, 'findById').resolves(review);
+    const deleteStub = sandbox.stub(Review, 'deleteOne')
+        .resolves({ deletedCount: 1 });
+
+    const req = makeRequest();
+    req.params.reviewId = reviewId;
+    const res = makeResponse();
+
+    await deleteReview(req, res);
+
+    assert.strictEqual(res.statusCode, 200);
+    assert.strictEqual(res.body.message, 'Review deleted successfully');
+    assert.strictEqual(deleteStub.calledOnce, true);
+    assert.deepStrictEqual(deleteStub.firstCall.args[0], {
+        _id: reviewId,
+        userId
+    });
+    assert.strictEqual(Restaurant.findByIdAndUpdate.calledOnce, true);
+});
+
+it('403: customer cannot delete another customers review', async function () {
+    const reviewId = '507f1f77bcf86cd799439012';
+
+    sandbox.stub(Review, 'findById').resolves({
+        userId: '507f191e810c19729de860eb'
+    });
+
+    const deleteStub = sandbox.stub(Review, 'deleteOne');
+
+    const req = makeRequest();
+    req.params.reviewId = reviewId;
+    const res = makeResponse();
+
+    await deleteReview(req, res);
+
+    assert.strictEqual(res.statusCode, 403);
+    assert.strictEqual(deleteStub.called, false);
+    assert.strictEqual(Restaurant.findByIdAndUpdate.called, false);
+});
 
 });

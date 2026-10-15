@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Tasks from './pages/Tasks';
 import CreateReview from './pages/CreateReview';
+import MyReviews from './pages/MyReviews';
 
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/restaurants/:restaurantId/review" element={<CreateReview />} />
+        <Route path="/my-reviews" element={<MyReviews />} />
       </Routes>
     </Router>
   );
