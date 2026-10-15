@@ -25,6 +25,16 @@ const reviewSchema = new mongoose.Schema({
     timestamps: true
 });
 
+reviewSchema.statics.calculateScore = function (ratings) {
+    const fields = ['food', 'service', 'ambience', 'value'];
+
+    const total = fields.reduce(
+        (sum, field) => sum + ratings[field], 0
+    );
+
+    return Math.round((total / fields.length) * 10) / 10;
+};
+
 reviewSchema.index({ restaurantId: 1, userId: 1 }, { unique: true });
 
 module.exports = mongoose.model('Review', reviewSchema);
