@@ -20,6 +20,7 @@ const Navbar = () => {
               <>
                 <Link to="/admin/claims" className="mr-4">Owner Claims</Link>
                 <Link to="/admin/restaurants" className="mr-4">Manage Restaurants</Link>
+                <Link to="/admin/reports" className="mr-4">Review Moderation</Link>
               </>
             )}
             {user.role === 'customer' && (

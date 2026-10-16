@@ -11,6 +11,7 @@ import RatingBreakdown from './pages/RatingBreakdown';
 import AdminClaims from './pages/AdminClaims';
 import RestaurantDetails from './pages/RestaurantDetails';
 import AdminRestaurants from './pages/AdminRestaurants';
+import AdminReports from './pages/AdminReports';
 
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
         <Route path="/admin/claims" element={<AdminClaims />} />
         <Route path="/restaurants/:restaurantId" element={<RestaurantDetails />} />
         <Route path="/admin/restaurants" element={<AdminRestaurants />} />
+        <Route path="/admin/reports" element={<AdminReports />} />
       </Routes>
     </Router>
   );
