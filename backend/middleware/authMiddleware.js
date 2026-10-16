@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { createRole } = require('../roleFactory');
 
 const protect = async (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -31,7 +32,41 @@ const authorizeRoles = (...roles) => {
             return res.status(401).json({ message: 'Not authorized' });
         }
 
-        if (!roles.includes(req.user.role)) {
+        const role = createRole(req.user.role);
+
+        if (!role || !roles.includes(role.name)) {
+            return res.status(403).json({ message: 'Forbidden: insufficient role' });
+        }
+
+        next();
+    };
+};
+
+const authorizePermissions = (...permissions) => {
+    return (req, res, next) => {
+        if (!req.user) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        const role = createRole(req.user.role);
+
+        if (!role || !permissions.every(permission => role.hasPermission(permission))) {
+            return res.status(403).json({ message: 'Forbidden: insufficient role' });
+        }
+
+        next();
+    };
+};
+
+const authorizeAnyPermission = (...permissions) => {
+    return (req, res, next) => {
+        if (!req.user) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        const role = createRole(req.user.role);
+
+        if (!role || !permissions.some(permission => role.hasPermission(permission))) {
             return res.status(403).json({ message: 'Forbidden: insufficient role' });
         }
 
@@ -41,4 +76,10 @@ const authorizeRoles = (...roles) => {
 
 const admin = authorizeRoles('admin');
 
-module.exports = { protect, authorizeRoles, admin };
+module.exports = {
+    protect,
+    authorizeRoles,
+    authorizePermissions,
+    authorizeAnyPermission,
+    admin
+};

@@ -1,12 +1,35 @@
 
 const express = require('express');
 const { getTasks, getAllReviews, addTask, updateTask, deleteTask } = require('../controllers/taskController');
-const { protect } = require('../middleware/authMiddleware');
+const {
+    protect,
+    authorizePermissions,
+    authorizeAnyPermission
+} = require('../middleware/authMiddleware');
+const { Permissions } = require('../roleFactory');
 const router = express.Router();
 
-router.route('/').get(protect, getTasks).post(protect, addTask);
+router.route('/').get(protect, getTasks).post(
+    protect,
+    authorizePermissions(Permissions.CREATE_REVIEW),
+    addTask
+);
 router.get('/all', getAllReviews);
-router.route('/:id').put(protect, updateTask).delete(protect, deleteTask);
+router.route('/:id').put(
+    protect,
+    authorizeAnyPermission(
+        Permissions.MANAGE_OWN_REVIEWS,
+        Permissions.UPDATE_ANY_REVIEW
+    ),
+    updateTask
+).delete(
+    protect,
+    authorizeAnyPermission(
+        Permissions.MANAGE_OWN_REVIEWS,
+        Permissions.DELETE_ANY_REVIEW
+    ),
+    deleteTask
+);
 
 module.exports = router;
     

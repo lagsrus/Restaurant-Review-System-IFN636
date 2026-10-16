@@ -1,4 +1,5 @@
 const Task = require('../models/Task');
+const { createRole, Permissions } = require('../roleFactory');
 
 const getTasks = async (req,res) => {
     try {
@@ -34,6 +35,13 @@ const { title, description, cuisine, location, waitTime, cost, rating, visitedAt
 try {
 const task = await Task.findById(req.params.id);
 if (!task) return res.status(404).json({ message: 'Task not found' });
+const role = createRole(req.user.role);
+const isOwner = role?.hasPermission(Permissions.MANAGE_OWN_REVIEWS) &&
+  task.userId.toString() === req.user.id.toString();
+const isAdmin = role?.hasPermission(Permissions.UPDATE_ANY_REVIEW);
+if (!isOwner && !isAdmin) {
+return res.status(403).json({ message: 'Not authorized to update this review' });
+}
 task.title = title || task.title;
 task.description = description || task.description;
 task.cuisine = cuisine || task.cuisine;
@@ -54,8 +62,10 @@ const deleteTask = async (req, res) => {
     const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ message: 'Task not found' });
 
-    const isOwner = task.userId.toString() === req.user.id.toString();
-    const isAdmin = req.user.role === 'admin';
+    const role = createRole(req.user.role);
+    const isOwner = role?.hasPermission(Permissions.MANAGE_OWN_REVIEWS) &&
+      task.userId.toString() === req.user.id.toString();
+    const isAdmin = role?.hasPermission(Permissions.DELETE_ANY_REVIEW);
 
     if (!isOwner && !isAdmin) {
       return res.status(403).json({ message: 'Not authorized to delete this review' });
