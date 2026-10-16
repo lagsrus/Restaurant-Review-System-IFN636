@@ -155,27 +155,21 @@ describe('authorizeRoles middleware', function () {
         assert.strictEqual(adminNextCalled, true);
     });
 
-    it('allows admins but not owners to enter the legacy review update handler', function () {
-        const ownerRes = makeResponse();
-        let ownerNextCalled = false;
-        authorizeAnyPermission(
-            Permissions.MANAGE_OWN_REVIEWS,
-            Permissions.UPDATE_ANY_REVIEW
-        )({ user: { role: 'owner' } }, ownerRes, () => {
-            ownerNextCalled = true;
-        });
+    it('denies admins and owners access to the legacy review update handler', function () {
+        for (const role of ['owner', 'admin']) {
+            const res = makeResponse();
+            let nextCalled = false;
 
-        assert.strictEqual(ownerRes.statusCode, 403);
-        assert.strictEqual(ownerNextCalled, false);
+            authorizeAnyPermission(Permissions.MANAGE_OWN_REVIEWS)(
+                { user: { role } },
+                res,
+                () => {
+                    nextCalled = true;
+                }
+            );
 
-        let adminNextCalled = false;
-        authorizeAnyPermission(
-            Permissions.MANAGE_OWN_REVIEWS,
-            Permissions.UPDATE_ANY_REVIEW
-        )({ user: { role: 'admin' } }, makeResponse(), () => {
-            adminNextCalled = true;
-        });
-
-        assert.strictEqual(adminNextCalled, true);
+            assert.strictEqual(res.statusCode, 403);
+            assert.strictEqual(nextCalled, false);
+        }
     });
 });

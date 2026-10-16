@@ -74,7 +74,7 @@ describe('deleteTask authorization', function () {
         assert.strictEqual(task.save.called, false);
     });
 
-    it('preserves admin ability to update another user\'s legacy review', async function () {
+    it('rejects an admin attempting to update a legacy review', async function () {
         const task = makeTask();
         Task.findById.resolves(task);
         const req = {
@@ -86,9 +86,8 @@ describe('deleteTask authorization', function () {
 
         await updateTask(req, res);
 
-        assert.strictEqual(res.statusCode, 200);
-        assert.strictEqual(task.title, 'Admin update');
-        assert.strictEqual(task.save.calledOnce, true);
+        assert.strictEqual(res.statusCode, 403);
+        assert.strictEqual(task.save.called, false);
     });
 
     it('allows an admin to delete another user\'s review', async function () {

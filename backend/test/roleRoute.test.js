@@ -15,6 +15,7 @@ chai.use(chaiHttp);
 describe('FR-01 role-protected routes', function () {
     const sandbox = sinon.createSandbox();
     const ownerId = '507f191e810c19729de860ea';
+    const adminId = '507f191e810c19729de860eb';
     const restaurantId = '507f1f77bcf86cd799439011';
     const reviewId = '507f1f77bcf86cd799439012';
 
@@ -24,6 +25,13 @@ describe('FR-01 role-protected routes', function () {
             select: sandbox.stub().resolves({
                 _id: ownerId,
                 role: 'owner'
+            })
+        });
+        jwt.verify.withArgs('admin-token').returns({ id: adminId });
+        User.findById.withArgs(adminId).returns({
+            select: sandbox.stub().resolves({
+                _id: adminId,
+                role: 'admin'
             })
         });
         sandbox.stub(Task, 'findById');
@@ -102,5 +110,27 @@ describe('FR-01 role-protected routes', function () {
         assert.strictEqual(legacyDeleteResponse.status, 403);
         assert.strictEqual(Review.findById.called, false);
         assert.strictEqual(Task.findById.called, false);
+    });
+
+    it('returns 403 when an admin attempts to edit a review', async function () {
+        const legacyResponse = await chai.request(app)
+            .put(`/api/tasks/${reviewId}`)
+            .set('Authorization', 'Bearer admin-token')
+            .send({ title: 'Unauthorized admin edit' })
+            .ok(result => result.status === 403);
+
+        const reviewResponse = await chai.request(app)
+            .put(`/api/reviews/${reviewId}`)
+            .set('Authorization', 'Bearer admin-token')
+            .send({
+                ratings: { food: 4, service: 4, ambience: 4, value: 4 },
+                comment: 'Unauthorized admin edit'
+            })
+            .ok(result => result.status === 403);
+
+        assert.strictEqual(legacyResponse.status, 403);
+        assert.strictEqual(reviewResponse.status, 403);
+        assert.strictEqual(Task.findById.called, false);
+        assert.strictEqual(Review.findById.called, false);
     });
 });

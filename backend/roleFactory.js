@@ -3,7 +3,6 @@ const Permissions = Object.freeze({
     CREATE_REVIEW: 'create:review',
     MANAGE_OWN_REVIEWS: 'manage:own-reviews',
     REPORT_REVIEW: 'report:review',
-    UPDATE_ANY_REVIEW: 'update:any-review',
     DELETE_ANY_REVIEW: 'delete:any-review'
 });
 
@@ -50,10 +49,7 @@ class AdminRole extends GuestRole {
     constructor() {
         super();
         this.name = 'admin';
-        this.additionalPermissions = new Set([
-            Permissions.UPDATE_ANY_REVIEW,
-            Permissions.DELETE_ANY_REVIEW
-        ]);
+        this.additionalPermissions = new Set([Permissions.DELETE_ANY_REVIEW]);
     }
 
     hasPermission(permission) {

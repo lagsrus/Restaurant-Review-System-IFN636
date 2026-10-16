@@ -57,13 +57,17 @@ describe('roleFactory', function () {
         );
     });
 
-    it('preserves admin permission to update legacy reviews', function () {
+    it('denies admins review updates while preserving review deletion', function () {
         assert.strictEqual(
-            createRole('admin').hasPermission(Permissions.UPDATE_ANY_REVIEW),
+            createRole('admin').hasPermission(Permissions.MANAGE_OWN_REVIEWS),
+            false
+        );
+        assert.strictEqual(
+            createRole('admin').hasPermission(Permissions.DELETE_ANY_REVIEW),
             true
         );
         assert.strictEqual(
-            createRole('owner').hasPermission(Permissions.UPDATE_ANY_REVIEW),
+            createRole('owner').hasPermission(Permissions.MANAGE_OWN_REVIEWS),
             false
         );
     });

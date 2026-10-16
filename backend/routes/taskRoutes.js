@@ -17,10 +17,7 @@ router.route('/').get(protect, getTasks).post(
 router.get('/all', getAllReviews);
 router.route('/:id').put(
     protect,
-    authorizeAnyPermission(
-        Permissions.MANAGE_OWN_REVIEWS,
-        Permissions.UPDATE_ANY_REVIEW
-    ),
+    authorizePermissions(Permissions.MANAGE_OWN_REVIEWS),
     updateTask
 ).delete(
     protect,

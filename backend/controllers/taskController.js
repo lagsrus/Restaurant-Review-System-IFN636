@@ -36,10 +36,10 @@ try {
 const task = await Task.findById(req.params.id);
 if (!task) return res.status(404).json({ message: 'Task not found' });
 const role = createRole(req.user.role);
-const isOwner = role?.hasPermission(Permissions.MANAGE_OWN_REVIEWS) &&
+const canManageReviews = role?.hasPermission(Permissions.MANAGE_OWN_REVIEWS);
+const isOwner = canManageReviews &&
   task.userId.toString() === req.user.id.toString();
-const isAdmin = role?.hasPermission(Permissions.UPDATE_ANY_REVIEW);
-if (!isOwner && !isAdmin) {
+if (!isOwner) {
 return res.status(403).json({ message: 'Not authorized to update this review' });
 }
 task.title = title || task.title;
