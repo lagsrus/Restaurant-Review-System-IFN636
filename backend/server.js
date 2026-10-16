@@ -16,8 +16,9 @@ app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/restaurants', require('./routes/reviewRoutes'));
 app.use('/api/reviews', require('./routes/reviewManagementRoutes'));
 app.use('/api/admin/restaurants', require('./routes/adminRestaurantRoutes'));
-// JSON parsing runs before routes, so its errors need an application-level handler.
-app.use('/api/admin/restaurants', (error, req, res, next) => {
+app.use('/api/admin/claims', require('./routes/adminClaimRoutes'));
+// NFR-02: JSON parsing fails before the controller's input validation runs.
+app.use(['/api/admin/restaurants', '/api/admin/claims'], (error, req, res, next) => {
     if (error.type === 'entity.parse.failed') {
         return res.status(400).json({ message: 'Request body must be valid JSON.' });
     }

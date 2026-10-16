@@ -8,6 +8,7 @@ import Tasks from './pages/Tasks';
 import CreateReview from './pages/CreateReview';
 import MyReviews from './pages/MyReviews';
 import RatingBreakdown from './pages/RatingBreakdown';
+import AdminClaims from './pages/AdminClaims';
 import RestaurantDetails from './pages/RestaurantDetails';
 import AdminRestaurants from './pages/AdminRestaurants';
 
@@ -25,6 +26,7 @@ function App() {
         <Route path="/restaurants/:restaurantId/review" element={<CreateReview />} />
         <Route path="/my-reviews" element={<MyReviews />} />
         <Route path="/restaurants/:restaurantId/ratings" element={<RatingBreakdown />} />
+        <Route path="/admin/claims" element={<AdminClaims />} />
         <Route path="/restaurants/:restaurantId" element={<RestaurantDetails />} />
         <Route path="/admin/restaurants" element={<AdminRestaurants />} />
       </Routes>
