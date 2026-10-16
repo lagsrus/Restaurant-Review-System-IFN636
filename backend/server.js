@@ -15,13 +15,6 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/restaurants', require('./routes/reviewRoutes'));
 app.use('/api/reviews', require('./routes/reviewManagementRoutes'));
-app.use('/api/admin/reports', require('./routes/adminReportRoutes'));
-app.use('/api/admin/reports', (error, req, res, next) => {
-    if (error.type === 'entity.parse.failed') {
-        return res.status(400).json({ message: 'Request body must be valid JSON.' });
-    }
-    next(error);
-});
 
 // Export the app object for testing
 if (require.main === module) {

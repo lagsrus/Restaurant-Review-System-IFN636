@@ -6,7 +6,6 @@ const reportSchema = new mongoose.Schema({
     reason: {type: String,enum: ['spam', 'offensive', 'fake', 'other'],required: true},
     note: { type: String, default: '' },
     status: { type: String, enum: ['open', 'dismissed', 'actioned'], default: 'open' },
-    decision: { type: String, enum: ['dismiss', 'hide', 'delete', null], default: null },
     resolvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     resolvedAt: { type: Date, default: null }
 }, {
