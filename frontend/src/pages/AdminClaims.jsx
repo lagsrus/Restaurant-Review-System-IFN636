@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axiosInstance from '../axiosConfig';
 import { useAuth } from '../context/AuthContext';
@@ -9,6 +9,10 @@ function AdminClaims() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [refreshCount, setRefreshCount] = useState(0);
+  const [deciding, setDeciding] = useState(null);
+  const [decisionError, setDecisionError] = useState('');
+  const [notice, setNotice] = useState('');
+  const decisionInFlight = useRef(false);
 
   useEffect(() => {
     if (user?.role !== 'admin' || !user?.token) return;
@@ -37,6 +41,31 @@ function AdminClaims() {
     return () => { active = false; };
   }, [user?.role, user?.token, refreshCount]);
 
+  const handleDecision = async (claim, decision) => {
+    if (decisionInFlight.current) return;
+    decisionInFlight.current = true;
+    setDeciding(claim._id);
+    setDecisionError('');
+    setNotice('');
+    try {
+      await axiosInstance.patch(`/api/admin/claims/${claim._id}`, { decision }, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      setNotice(`Claim for ${claim.restaurantId?.name || 'this restaurant'} ${decision}.`);
+      setClaims(current => current.filter(item => item._id !== claim._id));
+      setRefreshCount(count => count + 1);
+    } catch (err) {
+      setDecisionError(err.response?.data?.message || 'Could not save the claim decision. Refresh claims before trying again.');
+      // Another administrator may have handled or removed this claim.
+      if ([404, 409].includes(err.response?.status)) {
+        setRefreshCount(count => count + 1);
+      }
+    } finally {
+      decisionInFlight.current = false;
+      setDeciding(null);
+    }
+  };
+
   if (!user?.token) {
     return (
       <div className="max-w-4xl mx-auto p-6">
@@ -55,13 +84,15 @@ function AdminClaims() {
         <h1 className="text-2xl font-bold">Pending Ownership Claims</h1>
         <button
           onClick={() => setRefreshCount(count => count + 1)}
-          disabled={loading}
+          disabled={loading || deciding !== null}
           className="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
         >
           Refresh claims
         </button>
       </div>
 
+      {notice && <p role="status" className="text-green-700 mb-4">{notice}</p>}
+      {decisionError && <p role="alert" className="text-red-700 mb-4">{decisionError}</p>}
       {loading && <p role="status">Loading claims...</p>}
       {error && <p role="alert" className="text-red-700">{error}</p>}
       {!loading && !error && claims.length === 0 && (
@@ -81,6 +112,23 @@ function AdminClaims() {
           <p className="mt-2 text-sm text-gray-600">
             Submitted: {new Date(claim.createdAt).toLocaleString()}
           </p>
+          <div className="flex gap-3 mt-4">
+            <button
+              onClick={() => handleDecision(claim, 'approved')}
+              disabled={deciding !== null}
+              className="bg-green-700 text-white px-4 py-2 rounded disabled:opacity-50"
+            >
+              Approve
+            </button>
+            <button
+              onClick={() => handleDecision(claim, 'rejected')}
+              disabled={deciding !== null}
+              className="bg-red-700 text-white px-4 py-2 rounded disabled:opacity-50"
+            >
+              Reject
+            </button>
+            {deciding === claim._id && <span role="status">Saving decision...</span>}
+          </div>
         </article>
       ))}
     </main>
