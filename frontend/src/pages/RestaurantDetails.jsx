@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import axiosInstance from '../axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import RatingBreakdown from './RatingBreakdown';
+import ReportReview from '../components/ReportReview';
 
 const dimensions = ['food', 'service', 'ambience', 'value'];
 
@@ -159,6 +160,7 @@ function RestaurantDetails() {
                   <p>{review.ownerReply.text}</p>
                 </div>
               )}
+              <ReportReview reviewId={review._id} />
             </article>
           ))
         )}
