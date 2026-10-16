@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { authorizeRoles } = require('../middleware/authMiddleware');
+const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 
 function makeResponse() {
     return {
@@ -19,6 +19,19 @@ function makeResponse() {
 }
 
 describe('authorizeRoles middleware', function () {
+    it('returns 401 when protect receives no authentication token', async function () {
+        const req = { headers: {} };
+        const res = makeResponse();
+        let nextCalled = false;
+
+        await protect(req, res, () => {
+            nextCalled = true;
+        });
+
+        assert.strictEqual(res.statusCode, 401);
+        assert.strictEqual(nextCalled, false);
+    });
+
     it('returns 401 when there is no authenticated user', function () {
         const req = {};
         const res = makeResponse();
