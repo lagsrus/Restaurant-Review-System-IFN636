@@ -55,7 +55,7 @@ const deleteTask = async (req, res) => {
     if (!task) return res.status(404).json({ message: 'Task not found' });
 
     const isOwner = task.userId.toString() === req.user.id.toString();
-    const isAdmin = req.user.isAdmin === true;
+    const isAdmin = req.user.role === 'admin';
 
     if (!isOwner && !isAdmin) {
       return res.status(403).json({ message: 'Not authorized to delete this review' });
