@@ -9,6 +9,7 @@ import CreateReview from './pages/CreateReview';
 import MyReviews from './pages/MyReviews';
 import RatingBreakdown from './pages/RatingBreakdown';
 import RestaurantDetails from './pages/RestaurantDetails';
+import AdminRestaurants from './pages/AdminRestaurants';
 
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
         <Route path="/my-reviews" element={<MyReviews />} />
         <Route path="/restaurants/:restaurantId/ratings" element={<RatingBreakdown />} />
         <Route path="/restaurants/:restaurantId" element={<RestaurantDetails />} />
+        <Route path="/admin/restaurants" element={<AdminRestaurants />} />
       </Routes>
     </Router>
   );
