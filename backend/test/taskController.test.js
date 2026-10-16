@@ -2,7 +2,7 @@ const assert = require('assert');
 const sinon = require('sinon');
 
 const Task = require('../models/Task');
-const { deleteTask } = require('../controllers/taskController');
+const { updateTask, deleteTask } = require('../controllers/taskController');
 
 describe('deleteTask authorization', function () {
     const sandbox = sinon.createSandbox();
@@ -28,7 +28,8 @@ describe('deleteTask authorization', function () {
     function makeTask() {
         return {
             userId: { toString: () => authorId },
-            remove: sandbox.stub().resolves()
+            remove: sandbox.stub().resolves(),
+            save: sandbox.stub().resolves()
         };
     }
 
@@ -38,6 +39,55 @@ describe('deleteTask authorization', function () {
 
     afterEach(function () {
         sandbox.restore();
+    });
+
+    it('allows a customer to update their own review', async function () {
+        const task = makeTask();
+        Task.findById.resolves(task);
+        const req = {
+            params: { id: taskId },
+            user: { id: authorId, role: 'customer' },
+            body: { title: 'Updated title' }
+        };
+        const res = makeResponse();
+
+        await updateTask(req, res);
+
+        assert.strictEqual(res.statusCode, 200);
+        assert.strictEqual(task.title, 'Updated title');
+        assert.strictEqual(task.save.calledOnce, true);
+    });
+
+    it('denies a customer from updating another user\'s review', async function () {
+        const task = makeTask();
+        Task.findById.resolves(task);
+        const req = {
+            params: { id: taskId },
+            user: { id: otherUserId, role: 'customer' },
+            body: { title: 'Unauthorized update' }
+        };
+        const res = makeResponse();
+
+        await updateTask(req, res);
+
+        assert.strictEqual(res.statusCode, 403);
+        assert.strictEqual(task.save.called, false);
+    });
+
+    it('rejects an admin attempting to update a legacy review', async function () {
+        const task = makeTask();
+        Task.findById.resolves(task);
+        const req = {
+            params: { id: taskId },
+            user: { id: otherUserId, role: 'admin' },
+            body: { title: 'Admin update' }
+        };
+        const res = makeResponse();
+
+        await updateTask(req, res);
+
+        assert.strictEqual(res.statusCode, 403);
+        assert.strictEqual(task.save.called, false);
     });
 
     it('allows an admin to delete another user\'s review', async function () {

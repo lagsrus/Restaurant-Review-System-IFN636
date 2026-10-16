@@ -16,7 +16,7 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ message: 'User already exists' });
         }
 
-        const requestedRole = role || 'customer';
+        const requestedRole = role ?? 'customer';
 
         if (!['customer', 'owner'].includes(requestedRole)) {
             return res.status(400).json({
