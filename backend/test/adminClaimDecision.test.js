@@ -58,6 +58,21 @@ describe('RRP-28 / FR-14 / NFR-02: Decide ownership claims', function () {
         return call.send(body);
     }
 
+    for (const body of ['{"decision":', '{"decision":"approved",}', 'null']) {
+        it(`400: malformed JSON returns a safe message without database work (${body})`, async function () {
+            const res = await chai.request(app).patch(`/api/admin/claims/${claimId}`)
+                .set('Authorization', `Bearer ${token}`)
+                .set('Content-Type', 'application/json').send(body);
+            assert.strictEqual(res.status, 400);
+            assert.match(res.headers['content-type'], /application\/json/);
+            assert.deepStrictEqual(res.body, { message: 'Request body must be valid JSON.' });
+            sinon.assert.notCalled(User.findById);
+            sinon.assert.notCalled(transaction);
+            sinon.assert.notCalled(claim.save);
+            sinon.assert.notCalled(restaurant.save);
+        });
+    }
+
     it('200: approval assigns the applicant and records the authenticated admin and time', async function () {
         const before = Date.now();
         const res = await request({ decision: 'approved', decidedBy: 'forged-admin', decidedAt: '2000-01-01' });

@@ -75,6 +75,33 @@ async function run() {
             return { restaurant, claim };
         }
         const approved = await fixture('Approved');
+        const invalidRequests = [
+            ['truncated JSON', approved.claim.id, '{"decision":', 'Request body must be valid JSON.'],
+            ['trailing comma', approved.claim.id, '{"decision":"approved",}', 'Request body must be valid JSON.'],
+            ['null body', approved.claim.id, 'null', 'Request body must be valid JSON.'],
+            ['array body', approved.claim.id, '[]', 'Decision must be approved or rejected.'],
+            ['missing decision', approved.claim.id, '{}', 'Decision must be approved or rejected.'],
+            ['invalid decision', approved.claim.id, '{"decision":"pending"}', 'Decision must be approved or rejected.'],
+            ['object decision', approved.claim.id, '{"decision":{}}', 'Decision must be approved or rejected.'],
+            ['array decision', approved.claim.id, '{"decision":["approved"]}', 'Decision must be approved or rejected.'],
+            ['invalid claim ID', 'not-an-id', '{"decision":"approved"}', 'Invalid claim ID.'],
+            ['non-hex claim ID', 'z'.repeat(24), '{"decision":"approved"}', 'Invalid claim ID.']
+        ];
+        async function snapshot() {
+            return JSON.stringify(await Promise.all([User, Restaurant, OwnerClaim].map(
+                model => model.find({}).sort({ _id: 1 }).lean()
+            )));
+        }
+        for (const [label, id, body, message] of invalidRequests) {
+            const before = await snapshot();
+            const response = await fetch(`${url}/${id}`, { method: 'PATCH', headers, body });
+            assert.strictEqual(response.status, 400);
+            assert.match(response.headers.get('content-type'), /application\/json/);
+            const result = await response.json();
+            assert.deepStrictEqual(result, { message });
+            assert.strictEqual(await snapshot(), before, 'Invalid input must not change stored records');
+            console.log(`PASS NFR-02 ${label}: HTTP 400, ${JSON.stringify(result)}, no stack trace, stored records unchanged`);
+        }
         assert.strictEqual((await decide(approved.claim, 'approved')).status, 200);
         let saved = await OwnerClaim.findById(approved.claim.id);
         assert.strictEqual(saved.status, 'approved');
@@ -128,7 +155,7 @@ async function run() {
         assert.ok(pending.every(c => !('password' in c.userId)));
         assert.ok(!pending.some(c => [approved.claim.id, rejected.claim.id].includes(c._id)));
         console.log('PASS refreshed list populates details and excludes decided claims');
-        console.log('7 local MongoDB integration checks passed; shared Atlas was not used.');
+        console.log(`${7 + invalidRequests.length} local MongoDB integration checks passed; shared Atlas was not used.`);
     } finally {
         if (server) await new Promise(resolve => server.close(resolve));
         await mongoose.disconnect();
