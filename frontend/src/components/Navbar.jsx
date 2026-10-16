@@ -17,7 +17,10 @@ const Navbar = () => {
         {user ? (
           <>
             {user.role === 'admin' && (
-              <Link to="/admin/claims" className="mr-4">Owner Claims</Link>
+              <>
+                <Link to="/admin/claims" className="mr-4">Owner Claims</Link>
+                <Link to="/admin/restaurants" className="mr-4">Manage Restaurants</Link>
+              </>
             )}
             {user.role === 'customer' && (
                <Link to="/my-reviews" className="mr-4">My Reviews</Link>
