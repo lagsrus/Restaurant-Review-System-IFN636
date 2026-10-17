@@ -25,6 +25,9 @@ const Home = () => {
   });
   const [meta, setMeta] = useState({ cuisines: [], suburbs: [] });
 
+  // FR-05: the current sort. The default is top rated.
+  const [sort, setSort] = useState('rating');
+
   // Load the cuisine and suburb options for the filter dropdowns once.
   useEffect(() => {
     const fetchMeta = async () => {
@@ -44,8 +47,8 @@ const Home = () => {
     const fetchRestaurants = async () => {
       setLoading(true);
       try {
-        // Only send filter values that are set.
-        const params = { page };
+        // Send the sort and only the filter values that are set.
+        const params = { page, sort };
         Object.keys(filters).forEach((key) => {
           if (filters[key] !== '') {
             params[key] = filters[key];
@@ -62,11 +65,17 @@ const Home = () => {
     };
 
     fetchRestaurants();
-  }, [page, filters]);
+  }, [page, filters, sort]);
 
   // When a filter changes, go back to the first page.
   const handleFilterChange = (field, value) => {
     setFilters((current) => ({ ...current, [field]: value }));
+    setPage(1);
+  };
+
+  // When the sort changes, go back to the first page.
+  const handleSortChange = (value) => {
+    setSort(value);
     setPage(1);
   };
 
@@ -75,6 +84,20 @@ const Home = () => {
       <h1 className="text-3xl font-bold mb-6">Restaurants</h1>
 
       <RestaurantFilterBar filters={filters} meta={meta} onChange={handleFilterChange} />
+
+      {/* FR-05: sort control */}
+      <div className="flex justify-end items-center mb-4">
+        <label className="text-gray-600 mr-2">Sort by</label>
+        <select
+          value={sort}
+          onChange={(e) => handleSortChange(e.target.value)}
+          className="border rounded p-2"
+        >
+          <option value="rating">Top rated</option>
+          <option value="reviews">Most reviewed</option>
+          <option value="name">Name</option>
+        </select>
+      </div>
 
       {loading ? (
         <p>Loading...</p>
