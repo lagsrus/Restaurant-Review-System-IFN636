@@ -1,64 +1,92 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import axiosInstance from '../axiosConfig';
-import { useAuth } from '../context/AuthContext';
+
+// FR-03: the home page shows restaurants as cards.
+// Guests can browse, so no login is needed here.
+
+// Show the price level as dollar signs.
+const priceLabel = (level) => '$'.repeat(level || 1);
 
 const Home = () => {
-  const { user } = useAuth();
-  const [reviews, setReviews] = useState([]);
+  const [restaurants, setRestaurants] = useState([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchReviews = async () => {
+    const fetchRestaurants = async () => {
+      setLoading(true);
       try {
-        const response = await axiosInstance.get('/api/tasks/all');
-        setReviews(response.data);
+        const response = await axiosInstance.get('/api/restaurants', {
+          params: { page },
+        });
+        setRestaurants(response.data.data);
+        setTotalPages(response.data.totalPages);
       } catch (error) {
-        console.error('Failed to fetch reviews', error);
+        console.error('Failed to fetch restaurants', error);
       }
+      setLoading(false);
     };
 
-    fetchReviews();
-  }, []);
-
-  const handleDelete = async (id) => {
-    if (!user || user.role !== 'admin') return;
-    try {
-      await axiosInstance.delete(`/api/tasks/${id}`, {
-        headers: { Authorization: `Bearer ${user.token}` },
-      });
-
-      setReviews((prev) => prev.filter((review) => review._id !== id));
-    } catch (error) {
-      alert('Failed to delete review.');
-    }
-  };
+    fetchRestaurants();
+  }, [page]);
 
   return (
     <div className="max-w-5xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">All Reviews</h1>
+      <h1 className="text-3xl font-bold mb-6">Restaurants</h1>
 
-      {reviews.length === 0 ? (
-        <p>No reviews yet.</p>
+      {loading ? (
+        <p>Loading...</p>
+      ) : restaurants.length === 0 ? (
+        <p>No restaurants found.</p>
       ) : (
-        reviews.map((review) => (
-          <div key={review._id} className="bg-white shadow-md rounded p-5 mb-4">
-            <h2 className="text-2xl font-bold">{review.title}</h2>
-            <p className="text-gray-600">{review.cuisine}</p>
-            <p><strong>Location:</strong> {review.location}</p>
-            <p><strong>Wait Time:</strong> {review.waitTime}</p>
-            <p><strong>Cost:</strong> {review.cost}</p>
-            <p><strong>Rating:</strong> {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</p>
-            <p className="mt-3">{review.description}</p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {restaurants.map((restaurant) => (
+            <Link
+              key={restaurant._id}
+              to={`/restaurants/${restaurant._id}`}
+              className="bg-white shadow-md rounded p-5 hover:shadow-lg"
+            >
+              {restaurant.image ? (
+                <img
+                  src={restaurant.image}
+                  alt={restaurant.name}
+                  className="w-full h-40 object-cover rounded mb-3"
+                />
+              ) : null}
+              <h2 className="text-xl font-bold">{restaurant.name}</h2>
+              <p className="text-gray-600">
+                {restaurant.cuisine} · {restaurant.suburb}
+              </p>
+              <p className="text-gray-600">{priceLabel(restaurant.priceLevel)}</p>
+              <p className="mt-2">
+                <span className="text-yellow-500">★</span> {restaurant.avgRating} ({restaurant.reviewCount})
+              </p>
+            </Link>
+          ))}
+        </div>
+      )}
 
-            {user && user.role === 'admin' && (
-              <button
-                onClick={() => handleDelete(review._id)}
-                className="mt-4 bg-red-500 text-white px-4 py-2 rounded"
-              >
-                Delete
-              </button>
-            )}
-          </div>
-        ))
+      {/* Simple next and previous paging */}
+      {!loading && restaurants.length > 0 && (
+        <div className="flex justify-center items-center gap-4 mt-6">
+          <button
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+            disabled={page <= 1}
+            className="bg-gray-200 px-4 py-2 rounded disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span>Page {page} of {totalPages}</span>
+          <button
+            onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+            disabled={page >= totalPages}
+            className="bg-gray-200 px-4 py-2 rounded disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
       )}
     </div>
   );
