@@ -1,8 +1,10 @@
 const Restaurant = require('../models/Restaurant');
 const { buildRestaurantFilter, RestaurantQueryError } = require('../services/restaurantQuery');
+const { selectSortStrategy, SortError } = require('../services/restaurantSort');
 
 // FR-03: the plain list of restaurants for the home page.
 // FR-04: the list also supports search and filter query values.
+// FR-05: the list can be sorted by rating, reviews or name.
 // Guests can browse, so this endpoint does not need a login.
 // It returns a page of restaurants in a simple envelope:
 // { data, page, limit, total, totalPages }.
@@ -11,15 +13,18 @@ const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 50;
 
 const getRestaurants = async (req, res) => {
-    // FR-04: build the search and filter. Bad input is a 400, not a 500.
+    // FR-04 and FR-05: build the filter and choose the sort.
+    // Bad input is a 400, not a 500.
     let filter;
+    let sortSpec;
     try {
         filter = buildRestaurantFilter(req.query);
+        sortSpec = selectSortStrategy(req.query.sort).getSortSpec();
     } catch (error) {
-        if (error instanceof RestaurantQueryError) {
+        if (error instanceof RestaurantQueryError || error instanceof SortError) {
             return res.status(400).json({ message: error.message });
         }
-        console.error('getRestaurants filter failed:', error);
+        console.error('getRestaurants validation failed:', error);
         return res.status(500).json({ message: 'Server error' });
     }
 
@@ -45,7 +50,7 @@ const getRestaurants = async (req, res) => {
         const totalPages = Math.ceil(total / limit);
 
         const restaurants = await Restaurant.find(filter)
-            .sort({ name: 1 })
+            .sort(sortSpec)
             .skip(skip)
             .limit(limit);
 
