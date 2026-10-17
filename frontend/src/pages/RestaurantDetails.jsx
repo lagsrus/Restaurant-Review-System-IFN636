@@ -4,6 +4,7 @@ import axiosInstance from '../axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import RatingBreakdown from './RatingBreakdown';
 import ReportReview from '../components/ReportReview';
+import ClaimRestaurant from '../components/ClaimRestaurant';
 
 const dimensions = ['food', 'service', 'ambience', 'value'];
 
@@ -117,6 +118,9 @@ function RestaurantDetails() {
           >
             Write a Review
           </Link>
+        )}
+        {user?.role === 'owner' && !restaurant.ownerId && (
+          <ClaimRestaurant restaurantId={restaurantId} />
         )}
       </div>
 
