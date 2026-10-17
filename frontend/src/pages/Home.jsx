@@ -5,6 +5,7 @@ import RestaurantFilterBar from '../components/RestaurantFilterBar';
 
 // FR-03: the home page shows restaurants as cards.
 // FR-04: the home page can search and filter the restaurants.
+// FR-05: the home page can sort the restaurants.
 // Guests can browse, so no login is needed here.
 
 // Show the price level as dollar signs.
@@ -26,25 +27,29 @@ const Home = () => {
   });
   const [meta, setMeta] = useState({ cuisines: [], suburbs: [] });
 
+  // FR-05: the current sort. The default is top rated.
+  const [sort, setSort] = useState('rating');
+
   // Track the latest load. Each load takes the next number, and when its
   // response comes back we only use it if it is still the latest. This stops a
-  // slow earlier search from landing after a newer one and showing results that
-  // do not match what the user last typed.
+  // slow earlier search or sort from landing after a newer one and showing
+  // results that do not match what the user last typed or chose.
   const latestRequestRef = useRef(0);
 
-  // Load one page of restaurants for the given filters. The page number is only
-  // changed after a successful load, so the page shown always matches the
-  // restaurants on screen. If the load fails we show a clear message and keep
-  // the last good page and its restaurants, so nothing becomes inconsistent.
-  const loadPage = async (target, activeFilters) => {
+  // Load one page of restaurants for the given filters and sort. The page
+  // number is only changed after a successful load, so the page shown always
+  // matches the restaurants on screen. If the load fails we show a clear
+  // message and keep the last good page and its restaurants, so nothing
+  // becomes inconsistent.
+  const loadPage = async (target, activeFilters, activeSort) => {
     const requestId = latestRequestRef.current + 1;
     latestRequestRef.current = requestId;
 
     setLoading(true);
     setError('');
     try {
-      // Only send filter values that are set.
-      const params = { page: target };
+      // Send the sort and only the filter values that are set.
+      const params = { page: target, sort: activeSort };
       Object.keys(activeFilters).forEach((key) => {
         if (activeFilters[key] !== '') {
           params[key] = activeFilters[key];
@@ -90,7 +95,7 @@ const Home = () => {
 
   // Load the first page of restaurants on first render.
   useEffect(() => {
-    loadPage(1, filters);
+    loadPage(1, filters, sort);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -98,7 +103,13 @@ const Home = () => {
   const handleFilterChange = (field, value) => {
     const next = { ...filters, [field]: value };
     setFilters(next);
-    loadPage(1, next);
+    loadPage(1, next, sort);
+  };
+
+  // When the sort changes, reload from the first page with the new sort.
+  const handleSortChange = (value) => {
+    setSort(value);
+    loadPage(1, filters, value);
   };
 
   return (
@@ -106,6 +117,20 @@ const Home = () => {
       <h1 className="text-3xl font-bold mb-6">Restaurants</h1>
 
       <RestaurantFilterBar filters={filters} meta={meta} onChange={handleFilterChange} />
+
+      {/* FR-05: sort control */}
+      <div className="flex justify-end items-center mb-4">
+        <label className="text-gray-600 mr-2">Sort by</label>
+        <select
+          value={sort}
+          onChange={(e) => handleSortChange(e.target.value)}
+          className="border rounded p-2"
+        >
+          <option value="rating">Top rated</option>
+          <option value="reviews">Most reviewed</option>
+          <option value="name">Name</option>
+        </select>
+      </div>
 
       {error && <p className="text-red-600 mb-4">{error}</p>}
 
@@ -142,11 +167,12 @@ const Home = () => {
       )}
 
       {/* Simple next and previous paging. Each click loads that page with the
-          current filters and only moves the page number if the load succeeds. */}
+          current filters and sort and only moves the page number if the load
+          succeeds. */}
       {!loading && restaurants.length > 0 && (
         <div className="flex justify-center items-center gap-4 mt-6">
           <button
-            onClick={() => loadPage(page - 1, filters)}
+            onClick={() => loadPage(page - 1, filters, sort)}
             disabled={page <= 1}
             className="bg-gray-200 px-4 py-2 rounded disabled:opacity-50"
           >
@@ -154,7 +180,7 @@ const Home = () => {
           </button>
           <span>Page {page} of {totalPages}</span>
           <button
-            onClick={() => loadPage(page + 1, filters)}
+            onClick={() => loadPage(page + 1, filters, sort)}
             disabled={page >= totalPages}
             className="bg-gray-200 px-4 py-2 rounded disabled:opacity-50"
           >
