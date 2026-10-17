@@ -1,10 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import axiosInstance from '../axiosConfig';
 import { useAuth } from '../context/AuthContext';
 import RatingBreakdown from './RatingBreakdown';
 import ReportReview from '../components/ReportReview';
 import ClaimRestaurant from '../components/ClaimRestaurant';
+import RestaurantProfileForm, {
+  emptyRestaurantForm,
+  restaurantFormToPayload,
+  restaurantToForm
+} from '../components/RestaurantProfileForm';
 
 const dimensions = ['food', 'service', 'ambience', 'value'];
 
@@ -16,6 +21,12 @@ function RestaurantDetails() {
   const [reviews, setReviews] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState(emptyRestaurantForm);
+  const [profileError, setProfileError] = useState('');
+  const [profileNotice, setProfileNotice] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const profileSaveInFlight = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,6 +57,47 @@ function RestaurantDetails() {
   if (loading) return <p className="p-6">Loading restaurant...</p>;
   if (error) return <p role="alert" className="p-6">{error}</p>;
   if (!restaurant) return null;
+
+  const isAssignedOwner = user?.role === 'owner' && user?.token &&
+    restaurant.ownerId && String(restaurant.ownerId) === String(user.id);
+
+  const beginProfileEdit = () => {
+    setProfileForm(restaurantToForm(restaurant));
+    setProfileError('');
+    setProfileNotice('');
+    setEditingProfile(true);
+  };
+
+  const cancelProfileEdit = () => {
+    setEditingProfile(false);
+    setProfileForm(emptyRestaurantForm());
+    setProfileError('');
+  };
+
+  const saveProfile = async event => {
+    event.preventDefault();
+    if (profileSaveInFlight.current) return;
+
+    profileSaveInFlight.current = true;
+    setSavingProfile(true);
+    setProfileError('');
+    setProfileNotice('');
+    try {
+      const response = await axiosInstance.patch(
+        `/api/restaurants/${restaurantId}`,
+        restaurantFormToPayload(profileForm),
+        { headers: { Authorization: `Bearer ${user.token}` } }
+      );
+      setRestaurant(response.data);
+      setEditingProfile(false);
+      setProfileNotice('Restaurant profile updated.');
+    } catch (requestError) {
+      setProfileError(requestError.response?.data?.message || 'Could not update the restaurant profile.');
+    } finally {
+      profileSaveInFlight.current = false;
+      setSavingProfile(false);
+    }
+  };
 
   const links = [
     ['View Map', restaurant.location?.mapsUrl],
@@ -121,6 +173,27 @@ function RestaurantDetails() {
         )}
         {user?.role === 'owner' && !restaurant.ownerId && (
           <ClaimRestaurant restaurantId={restaurantId} />
+        )}
+        {isAssignedOwner && (
+          <div className="mt-5">
+            {profileNotice && <p role="status" className="mb-3 text-green-700">{profileNotice}</p>}
+            {profileError && <p role="alert" className="mb-3 text-red-700">{profileError}</p>}
+            {!editingProfile ? (
+              <button type="button" onClick={beginProfileEdit} className="bg-blue-600 text-white px-4 py-2 rounded">
+                Edit restaurant profile
+              </button>
+            ) : (
+              <RestaurantProfileForm
+                form={profileForm}
+                onChange={(key, value) => setProfileForm(current => ({ ...current, [key]: value }))}
+                onSubmit={saveProfile}
+                heading="Edit restaurant"
+                saveLabel="Save changes"
+                busy={savingProfile}
+                onCancel={cancelProfileEdit}
+              />
+            )}
+          </div>
         )}
       </div>
 
