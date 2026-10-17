@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axiosInstance from '../axiosConfig';
+import RestaurantFilterBar from '../components/RestaurantFilterBar';
 
 // FR-03: the home page shows restaurants as cards.
+// FR-04: the home page can search and filter the restaurants.
 // Guests can browse, so no login is needed here.
 
 // Show the price level as dollar signs.
@@ -14,13 +16,43 @@ const Home = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
 
+  const [filters, setFilters] = useState({
+    search: '',
+    cuisine: '',
+    suburb: '',
+    priceLevel: '',
+    minRating: '',
+  });
+  const [meta, setMeta] = useState({ cuisines: [], suburbs: [] });
+
+  // Load the cuisine and suburb options for the filter dropdowns once.
+  useEffect(() => {
+    const fetchMeta = async () => {
+      try {
+        const response = await axiosInstance.get('/api/restaurants/meta');
+        setMeta(response.data);
+      } catch (error) {
+        console.error('Failed to fetch filter options', error);
+      }
+    };
+
+    fetchMeta();
+  }, []);
+
+  // Load the restaurants whenever the page or the filters change.
   useEffect(() => {
     const fetchRestaurants = async () => {
       setLoading(true);
       try {
-        const response = await axiosInstance.get('/api/restaurants', {
-          params: { page },
+        // Only send filter values that are set.
+        const params = { page };
+        Object.keys(filters).forEach((key) => {
+          if (filters[key] !== '') {
+            params[key] = filters[key];
+          }
         });
+
+        const response = await axiosInstance.get('/api/restaurants', { params });
         setRestaurants(response.data.data);
         setTotalPages(response.data.totalPages);
       } catch (error) {
@@ -30,11 +62,19 @@ const Home = () => {
     };
 
     fetchRestaurants();
-  }, [page]);
+  }, [page, filters]);
+
+  // When a filter changes, go back to the first page.
+  const handleFilterChange = (field, value) => {
+    setFilters((current) => ({ ...current, [field]: value }));
+    setPage(1);
+  };
 
   return (
     <div className="max-w-5xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Restaurants</h1>
+
+      <RestaurantFilterBar filters={filters} meta={meta} onChange={handleFilterChange} />
 
       {loading ? (
         <p>Loading...</p>
