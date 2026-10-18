@@ -48,4 +48,11 @@ const restaurantSchema = new mongoose.Schema({
     timestamps: true
 });
 
+// FR-05 / NFR-03: indexes for the fields the discovery list sorts and filters on,
+// so the list stays fast under load.
+restaurantSchema.index({ 'ratingSummary.avgRating': -1 });
+restaurantSchema.index({ name: 1 });
+restaurantSchema.index({ cuisine: 1 });
+restaurantSchema.index({ 'location.suburb': 1 });
+
 module.exports = mongoose.model('Restaurant', restaurantSchema);
