@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import RatingBreakdown from './RatingBreakdown';
 import ReportReview from '../components/ReportReview';
 import ClaimRestaurant from '../components/ClaimRestaurant';
+import OwnerReplyForm from '../components/OwnerReplyForm';
 import RestaurantProfileForm, {
   emptyRestaurantForm,
   restaurantFormToPayload,
@@ -236,6 +237,19 @@ function RestaurantDetails() {
                   <p className="font-bold mb-1">Owner Reply</p>
                   <p>{review.ownerReply.text}</p>
                 </div>
+              )}
+              {isAssignedOwner && !review.ownerReply?.text && (
+                <OwnerReplyForm
+                  reviewId={review._id}
+                  token={user.token}
+                  onReplyPosted={updatedReview => {
+                    setReviews(current => current.map(item =>
+                      item._id === updatedReview._id
+                        ? { ...item, ownerReply: updatedReview.ownerReply }
+                        : item
+                    ));
+                  }}
+                />
               )}
               <ReportReview reviewId={review._id} />
             </article>
