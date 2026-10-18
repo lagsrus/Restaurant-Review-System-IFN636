@@ -3,11 +3,14 @@ const mongoose = require('mongoose');
 
 const connectDB = require('./config/db');
 const Restaurant = require('./models/Restaurant');
+const Review = require('./models/Review');
+const OwnerClaim = require('./models/OwnerClaim');
 
 // FR-02: large optional dataset for load testing (NFR-03).
 // Adds many generated restaurants for load testing. It only removes its own
 // previously generated restaurants (the ones named "Load Test Restaurant"),
-// so real restaurants, reviews, claims and reports are never touched.
+// and only when they have no reviews or owner claims, so real data and any
+// linked records are never touched.
 // Usage: node backend/seedLarge.js [count]   default is 300.
 
 const cuisines = ['Italian', 'Thai', 'Japanese', 'Indian', 'Mexican', 'Chinese', 'Vietnamese', 'Korean', 'Cafe', 'Burgers', 'Spanish', 'Lebanese'];
@@ -17,12 +20,35 @@ const round1 = value => Math.round(value * 10) / 10;
 
 const seedLarge = async () => {
     try {
+        // Work out the count and check it first. We validate before touching the
+        // database, so a bad value such as -1 can never delete data without
+        // inserting replacements.
+        let count = 300;
+        if (process.argv[2] !== undefined) {
+            count = Number(process.argv[2]);
+            if (!Number.isInteger(count) || count < 1) {
+                console.error('Count must be a positive whole number.');
+                process.exit(1);
+            }
+        }
+
         await connectDB();
 
-        // Only clear the load test restaurants from a previous run, nothing else.
-        await Restaurant.deleteMany({ name: /^Load Test Restaurant / });
+        // Find the load test restaurants left over from a previous run.
+        const previous = await Restaurant.find({ name: /^Load Test Restaurant / }).select('_id');
+        const previousIds = previous.map(restaurant => restaurant._id);
 
-        const count = parseInt(process.argv[2], 10) || 300;
+        // Protect any that have reviews or owner claims. We only remove the ones
+        // with no linked records, so we never orphan a review or a claim.
+        const reviewedIds = await Review.distinct('restaurantId', { restaurantId: { $in: previousIds } });
+        const claimedIds = await OwnerClaim.distinct('restaurantId', { restaurantId: { $in: previousIds } });
+        const linked = new Set([...reviewedIds, ...claimedIds].map(String));
+        const safeToDelete = previousIds.filter(id => !linked.has(String(id)));
+
+        const removed = await Restaurant.deleteMany({ _id: { $in: safeToDelete } });
+        const kept = previousIds.length - safeToDelete.length;
+        console.log('Removed ' + removed.deletedCount + ' old load test restaurants, kept ' + kept + ' that have reviews or claims');
+
         const docs = [];
 
         for (let i = 0; i < count; i++) {
