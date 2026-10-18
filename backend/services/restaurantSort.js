@@ -41,6 +41,11 @@ const strategies = {
     name: new NameSort()
 };
 
+// The allowed sort values as a plain list. We check against this list rather
+// than the strategies object so inherited object keys such as constructor or
+// __proto__ can never slip through.
+const SORT_VALUES = ['rating', 'reviews', 'name'];
+
 class SortError extends Error {}
 
 // Pick the strategy for the sort value. The default is top rated.
@@ -51,7 +56,7 @@ const selectSortStrategy = (sortValue) => {
     }
 
     const key = String(sortValue).trim().toLowerCase();
-    if (!strategies[key]) {
+    if (!SORT_VALUES.includes(key)) {
         throw new SortError('Sort must be one of rating, reviews or name.');
     }
     return strategies[key];
@@ -63,5 +68,6 @@ module.exports = {
     ReviewCountSort,
     NameSort,
     selectSortStrategy,
-    SortError
+    SortError,
+    SORT_VALUES
 };

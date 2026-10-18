@@ -69,6 +69,12 @@ describe('RRP-34 / FR-05: Restaurant sort', function () {
         it('throws on an unknown sort value', function () {
             assert.throws(() => selectSortStrategy('cheapest'), SortError);
         });
+
+        it('throws on an inherited object key such as constructor or __proto__', function () {
+            assert.throws(() => selectSortStrategy('constructor'), SortError);
+            assert.throws(() => selectSortStrategy('__proto__'), SortError);
+            assert.throws(() => selectSortStrategy('hasOwnProperty'), SortError);
+        });
     });
 
     describe('getRestaurants with sort', function () {
@@ -94,6 +100,17 @@ describe('RRP-34 / FR-05: Restaurant sort', function () {
 
             const res = makeResponse();
             await getRestaurants({ query: { sort: 'cheapest' } }, res);
+
+            assert.strictEqual(res.statusCode, 400);
+            assert.strictEqual(res.body.message, 'Sort must be one of rating, reviews or name.');
+            assert.strictEqual(find.called, false);
+        });
+
+        it('400: rejects an inherited object key such as constructor', async function () {
+            const find = sandbox.stub(Restaurant, 'find');
+
+            const res = makeResponse();
+            await getRestaurants({ query: { sort: 'constructor' } }, res);
 
             assert.strictEqual(res.statusCode, 400);
             assert.strictEqual(res.body.message, 'Sort must be one of rating, reviews or name.');
