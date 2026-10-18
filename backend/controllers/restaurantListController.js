@@ -1,6 +1,8 @@
 const Restaurant = require('../models/Restaurant');
+const { buildRestaurantFilter, RestaurantQueryError } = require('../services/restaurantQuery');
 
 // FR-03: the plain list of restaurants for the home page.
+// FR-04: the list also supports search and filter query values.
 // Guests can browse, so this endpoint does not need a login.
 // It returns a page of restaurants in a simple envelope:
 // { data, page, limit, total, totalPages }.
@@ -9,6 +11,18 @@ const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 50;
 
 const getRestaurants = async (req, res) => {
+    // FR-04: build the search and filter. Bad input is a 400, not a 500.
+    let filter;
+    try {
+        filter = buildRestaurantFilter(req.query);
+    } catch (error) {
+        if (error instanceof RestaurantQueryError) {
+            return res.status(400).json({ message: error.message });
+        }
+        console.error('getRestaurants filter failed:', error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+
     try {
         // Work out the page number. Anything invalid falls back to page 1.
         let page = parseInt(req.query.page, 10);
@@ -26,10 +40,6 @@ const getRestaurants = async (req, res) => {
         }
 
         const skip = (page - 1) * limit;
-
-        // For now the list shows all restaurants.
-        // Search, filter and sort are added in the next stories.
-        const filter = {};
 
         const total = await Restaurant.countDocuments(filter);
         const totalPages = Math.ceil(total / limit);
@@ -58,4 +68,25 @@ const getRestaurants = async (req, res) => {
     }
 };
 
-module.exports = { getRestaurants };
+// FR-04: the distinct cuisines and suburbs, used to fill the filter dropdowns.
+const getRestaurantMeta = async (req, res) => {
+    try {
+        const cuisines = await Restaurant.distinct('cuisine');
+        const suburbs = await Restaurant.distinct('location.suburb');
+
+        // Drop empty values and sort them so the dropdowns read nicely.
+        const clean = list => list
+            .filter(value => value && String(value).trim() !== '')
+            .sort();
+
+        return res.status(200).json({
+            cuisines: clean(cuisines),
+            suburbs: clean(suburbs)
+        });
+    } catch (error) {
+        console.error('getRestaurantMeta failed:', error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = { getRestaurants, getRestaurantMeta };
