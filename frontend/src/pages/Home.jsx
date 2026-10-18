@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axiosInstance from '../axiosConfig';
 import RestaurantFilterBar from '../components/RestaurantFilterBar';
@@ -26,11 +26,20 @@ const Home = () => {
   });
   const [meta, setMeta] = useState({ cuisines: [], suburbs: [] });
 
+  // Track the latest load. Each load takes the next number, and when its
+  // response comes back we only use it if it is still the latest. This stops a
+  // slow earlier search from landing after a newer one and showing results that
+  // do not match what the user last typed.
+  const latestRequestRef = useRef(0);
+
   // Load one page of restaurants for the given filters. The page number is only
   // changed after a successful load, so the page shown always matches the
   // restaurants on screen. If the load fails we show a clear message and keep
   // the last good page and its restaurants, so nothing becomes inconsistent.
   const loadPage = async (target, activeFilters) => {
+    const requestId = latestRequestRef.current + 1;
+    latestRequestRef.current = requestId;
+
     setLoading(true);
     setError('');
     try {
@@ -43,14 +52,26 @@ const Home = () => {
       });
 
       const response = await axiosInstance.get('/api/restaurants', { params });
+
+      // A newer load started while we waited, so ignore this stale response.
+      if (requestId !== latestRequestRef.current) {
+        return;
+      }
+
       setRestaurants(response.data.data);
       setTotalPages(response.data.totalPages);
       setPage(target);
     } catch (err) {
+      if (requestId !== latestRequestRef.current) {
+        return;
+      }
       console.error('Failed to fetch restaurants', err);
       setError('Could not load restaurants. Please try again.');
     }
-    setLoading(false);
+
+    if (requestId === latestRequestRef.current) {
+      setLoading(false);
+    }
   };
 
   // Load the cuisine and suburb options for the filter dropdowns once.
