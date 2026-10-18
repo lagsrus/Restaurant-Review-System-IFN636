@@ -2,12 +2,13 @@
 // The legacy setupTests.js imports jest-dom, which is absent from this project's dependencies.
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Simulate } from 'react-dom/test-utils';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import RestaurantDetails from './RestaurantDetails';
 import axiosInstance from '../axiosConfig';
 import { useAuth } from '../context/AuthContext';
 
-jest.mock('../axiosConfig', () => ({ get: jest.fn() }));
+jest.mock('../axiosConfig', () => ({ get: jest.fn(), post: jest.fn() }));
 jest.mock('../context/AuthContext', () => ({ useAuth: jest.fn() }));
 jest.mock('./RatingBreakdown', () => () => null);
 jest.mock('../components/ReportReview', () => () => null);
@@ -74,4 +75,65 @@ test('does not show the owner claim form to customers', async () => {
   await mount();
   expect(container.textContent).not.toContain('Claim this restaurant');
   expect(container.querySelector('form')).toBeNull();
+});
+
+test('allows the assigned owner to post a public reply to a published review', async () => {
+  const review = {
+    _id: 'review-1',
+    score: 4,
+    createdAt: '2026-10-17T00:00:00.000Z',
+    ratings: { food: 4, service: 4, ambience: 4, value: 4 },
+    comment: 'A good meal'
+  };
+  useAuth.mockReturnValue({ user: { id: 'owner-1', role: 'owner', token: 'owner-token' } });
+  axiosInstance.get.mockResolvedValue({
+    data: {
+      restaurant: { ...restaurant, ownerId: 'owner-1' },
+      reviews: [review]
+    }
+  });
+  axiosInstance.post.mockResolvedValue({
+    data: { _id: review._id, ownerReply: { text: 'Thank you for visiting.' } }
+  });
+  await mount();
+
+  expect(container.textContent).toContain('Reply to this review');
+  await act(async () => {
+    Simulate.change(container.querySelector('textarea'), { target: { value: '  Thank you for visiting.  ' } });
+  });
+  await act(async () => {
+    Simulate.submit(container.querySelector('form'));
+  });
+
+  expect(axiosInstance.post).toHaveBeenCalledWith(
+    '/api/reviews/review-1/reply',
+    { text: '  Thank you for visiting.  ' },
+    { headers: { Authorization: 'Bearer owner-token' } }
+  );
+  expect(container.textContent).toContain('Thank you for visiting.');
+  expect(container.textContent).not.toContain('Reply to this review');
+});
+
+test('does not offer owner replies to customers or owners of another restaurant', async () => {
+  const review = {
+    _id: 'review-1',
+    score: 4,
+    createdAt: '2026-10-17T00:00:00.000Z',
+    ratings: { food: 4, service: 4, ambience: 4, value: 4 },
+    comment: 'A good meal'
+  };
+  axiosInstance.get.mockResolvedValue({
+    data: {
+      restaurant: { ...restaurant, ownerId: 'owner-1' },
+      reviews: [review]
+    }
+  });
+
+  useAuth.mockReturnValue({ user: { id: 'customer-1', role: 'customer', token: 'customer-token' } });
+  await mount();
+  expect(container.textContent).not.toContain('Reply to this review');
+
+  useAuth.mockReturnValue({ user: { id: 'owner-2', role: 'owner', token: 'other-token' } });
+  await mount();
+  expect(container.textContent).not.toContain('Reply to this review');
 });
