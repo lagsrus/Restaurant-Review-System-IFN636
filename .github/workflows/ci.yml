@@ -8,7 +8,7 @@ on:
 jobs:
   deploy-instance-1:
     name: Deploy to instance 1
-    runs-on: [self-hosted, inst1]
+    runs-on: [self-hosted, instance1]
     strategy:
       matrix:
         node-version: [22]
@@ -73,7 +73,7 @@ jobs:
   deploy-instance-2:
     name: Deploy to instance 2
     needs: deploy-instance-1
-    runs-on: [self-hosted, inst2]
+    runs-on: [self-hosted, instance2]
     strategy:
       matrix:
         node-version: [22]
