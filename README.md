@@ -1,38 +1,39 @@
 # Restaurant-Review-System-IFN636
 
 ## Prerequisites
-- Nodejs
+- Node.js
 - MongoDB
 
-## Setup 
+## Setup
 - Clone the repository
-- Create a fresh MongoDB cluster
-- Enter personal Mongo connection URI into backend .env file
-- Determine whether application should be accessed locally OR in cloud:
+- Create a MongoDB cluster, or use the team cluster
+- Enter the Mongo connection URI into the backend .env file
+- Decide whether to run the application locally or in the cloud
 
 ### Local Deployment
-- Run npm start in backend and frontend folders of the project
-- Visit local url provided
-- Create user account/s and access the system. Admin user accounts are created by manually changing the "isAdmin" attribute to true on an existing account in the MongoDB view.
+- Run npm start in the backend and frontend folders
+- Visit the local URL provided
+- Create user accounts and access the system. Admin accounts are set by changing the role to admin on an existing account in the database.
 
-### Cloud Deployment
-- Ensure local backend .env file has your personal MongoDB connection string
-- Ensure security rules allow ports 3000 and 5001 on the remote instance. Configure rules to allow inbound traffic from devices you wish to access the app with.
-- Find axiosConfig.jsx in the project folder
-- Comment out "baseURL: 'http://localhost:5001',"
-- Uncomment "baseURL: 'http://<YOUR_PUBLIC_IP_HERE>:5001'," -> Without this step, backend won't work when accessing remotely
-- Run npm start in the project folder
-- Visit site from external device by pasting public IP of instance + port 3000 into browser, e.g http://15.135.186.175:3000
+### Cloud Deployment (AWS, Assessment 2)
+The application runs on two EC2 instances behind an AWS Application Load Balancer, with deployment automated through GitHub Actions.
+- CI/CD: a push to the main branch runs the tests and deploys to both instances through a self hosted GitHub Actions runner on each instance (.github/workflows/ci.yml).
+- Each instance runs the backend and the frontend under PM2, with Nginx on port 80 reverse proxying to the frontend and forwarding /api to the backend.
+- The load balancer distributes traffic across the two instances on port 80.
+- The frontend API address is set at build time with the REACT_APP_API_URL environment variable in the workflow, pointing at the load balancer, so no manual edit of axiosConfig is needed.
+- Secrets (MONGO_URI, JWT_SECRET, PORT) are stored in GitHub and written to the server .env at deploy time.
 
 ## Architecture Summary
-- MongoDB database, Mongoose schema
-- Frontend: ReactJS
+- MongoDB database with Mongoose schemas
+- Frontend: React
 - Backend: Express
-- Authentication: JWT, role checks
+- Authentication: JWT with role checks
+- Deployment: two EC2 instances behind an AWS Application Load Balancer, Nginx and PM2 on each, CI/CD with GitHub Actions
 
 ## Known Limitations
-- Frontend isn't matched with Figma prototype, however basic functionality is implemented
-- Admins cannot delete users, only their reviews. Users must be deleted through the database
+- The frontend does not fully match the Figma prototype, but the core functionality is implemented
+- Admins cannot delete users, only reviews. Users are removed through the database.
 
-## Deployment URL: 
-- As of 02/09/2026: http://15.135.186.175:3000
+## Deployment URL
+- Live through the load balancer (Assessment 2): http://MyGroup3AppLB-1551883173.ap-southeast-2.elb.amazonaws.com
+- Instance 1 direct access: http://54.206.187.126
