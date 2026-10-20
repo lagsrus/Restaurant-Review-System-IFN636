@@ -8,6 +8,12 @@ const connectDB = require('./config/db');
 
 
 const app = express();
+const os = require('os');
+
+// NFR-04: a simple health endpoint that shows which instance answered.
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', server: os.hostname() });
+});
 
 app.use(cors());
 app.use(express.json());
