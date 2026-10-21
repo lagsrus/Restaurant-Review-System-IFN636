@@ -37,3 +37,4 @@ The application runs on two EC2 instances behind an AWS Application Load Balance
 ## Deployment URL
 - Live through the load balancer (Assessment 2): http://MyGroup3AppLB-1551883173.ap-southeast-2.elb.amazonaws.com
 - Instance 1 direct access: http://54.206.187.126
+- Instance 2 direct access: http://54.253.93.151
